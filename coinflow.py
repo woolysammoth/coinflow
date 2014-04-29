@@ -136,6 +136,14 @@ class CoinFlowApp(App):
 				self.writeConsole('Post ID: ' + str(row[0]) + ' Fee: ' + str(row[2]) + '\nPost: ' + str(row[1]) + '\n')
 			return
 			
+		#/nick
+		#set your nickname
+		elif command[0] == '/nick':
+			if self.agent is None:
+				self.writeConsole('You don\'t have an active agent.\n/add an agent or /login in order to set your nickname.') 
+				return
+			
+			
 				
 			
 		
