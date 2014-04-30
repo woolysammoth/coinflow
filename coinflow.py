@@ -5,6 +5,10 @@ from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.label import Label
 from kivy.uix.textinput import TextInput
 
+import os.path
+import dbCreate
+if not os.path.isfile('coinflow.db'):
+	dbCreate.genDB()
 
 
 class CoinFlowApp(App):
@@ -16,6 +20,8 @@ class CoinFlowApp(App):
 	
 	chbsagent = netvend.Agent('correct horse battery staple', seed=True)
 	agent = None
+	allNicks = []
+	tipAmount = 1
 	
 	def sendCommand(self, instance, value=False):
 		"""
@@ -38,39 +44,62 @@ class CoinFlowApp(App):
 		
 		#/add [seed] - set up a new agent using the supplied seed
 		#for the time being we add a simple balance to allow for testing
-		if command[0] == '/add':
+		if command[0].lower() == '/add':
 			com.commandAdd(self, command)
 			return
 			
 		#/login [seed] - login as an existing agent
-		elif command[0] == '/login':
+		elif command[0].lower() == '/login':
 			com.commandLogin(self, command)
 			return
 			
 		#/tip [address] - send a tip to another user or post
-		elif command[0] == '/tip':
+		elif command[0].lower() == '/tip':
 			com.commandTip(self, command)
 			return
 		
 		#/post [message] - post a message to netvend		
-		elif command[0] == '/post':
+		elif command[0].lower() == '/post':
 			com.commandPost(self, command)
 			return
 		
 		#/history [address] - view the last ten posts for the specified user (defaults to self)	
-		elif command[0] == '/history':
+		elif command[0].lower() == '/history':
 			com.commandHistory(self, command)
 			return
 			
 		#/nick - set your nickname
-		elif command[0] == '/nick':
+		elif command[0].lower() == '/nick':
 			com.commandNick(self, command)
 			return
 			
 		#/listusers - list all users on the system
-		elif command[0] == '/listusers':
-			com.commandListUsers(self, command)
+		elif command[0].lower() == '/listagents':
+			com.commandListAgents(self, command)
 			return
+			
+		#/follow [agent] - follow the specified agent
+		elif command[0].lower() == '/follow':
+			com.commandFollow(self, command)
+			return
+			
+		#/listfollows [agent] - list everyone you follow
+		elif command[0].lower() == '/listfollows':
+			com.commandListFollows(self, command)
+			return
+			
+		#/listprofiles [agent] - list all available profiles
+		elif command[0].lower() == '/listprofiles':
+			com.commandListProfiles(self, command)
+			return
+			
+		#/gettipammount - get the current tip amount
+		elif command[0].lower() == '/gettipamount':
+			com.commandGetTipAmount(self, command)
+			
+		#/settipammount - set the current tip amount
+		elif command[0].lower() == '/settipamount':
+			com.commandSetTipAmount(self, command)
 						
 		#otherwise we don;t know what's goin on
 		else:
@@ -86,7 +115,7 @@ class CoinFlowApp(App):
 		#get the current output text and store it
 		outText = self.output.text
 		#once we've figured out what to do, write to the console and return focus to the input box
-		self.output.text = outText + text + '\n'
+		self.output.text = str(outText) + str(text) + '\n'
 		self.input.focus = True
 
 	def build(self):
