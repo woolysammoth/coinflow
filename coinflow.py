@@ -73,7 +73,7 @@ class CoinFlowApp(App):
 			com.commandNick(self, command)
 			return
 			
-		#/listusers - list all users on the system
+		#/listagents - list all users on the system
 		elif command[0].lower() == '/listagents':
 			com.commandListAgents(self, command)
 			return
