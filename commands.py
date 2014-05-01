@@ -229,12 +229,12 @@ def commandFollow(self, command):
 		nick = command[1]
 	conn = sqlite3.connect('coinflow.db')
 	c = conn.cursor()
-	c.execute("select id from follows where address = '?';", (str(address),))
+	c.execute("select id from follows where address = ?;", (str(address),))
 	id = c.fetchone() 
 	if id is None:
 		c.execute("insert into follows (nick, address) values (?,?);", (str(nick), str(address)))
 	else:
-		c.execute("update follows set nick='?' where address='?';", (str(nick), str(address)))
+		c.execute("update follows set nick=? where address=?;", (str(nick), str(address)))
 	conn.commit()
 	conn.close()
 	self.writeConsole('You are now following ' + nick)

@@ -62,14 +62,15 @@ def getNick(self, address):
 	"""
 		get the nickname associated with the specified address
 	"""
-	query = "select data from posts where address = '" + address + "' and data like 'nick:%' order by post_id desc limit 1"
-	rows = putQuery(self, query)
-	if rows is False:
+	conn = sqlite3.connect('coinflow.db')
+	c = conn.cursor()
+	c.execute('select nick from nicks where address = ?;', (address,))
+	nick = c.fetchone()
+	conn.close()
+	if nick is None:
 		return address
-	for row in rows['rows']:
-		data = row[0]
-	return data[5:]
-	
+	else:
+		return nick[0]	
 	
 def isAddress(check):
 	"""
@@ -124,9 +125,9 @@ def pollAllPosts(self):
 		self.savedAllPostId = PostId[0]
 	if self.newAllPostId > self.savedAllPostId:
 		if self.savedAllPostId == 0:
-			c.execute('insert into data values (?,?);', ('post_id', self.newAllPostId))
+			c.execute('insert into data values (?,?);', ('post_id', str(self.newAllPostId)))
 		else:
-			c.execute('update data set value = ? where name = ?;', (self.newAllPostId, 'all_post_id'))
+			c.execute('update data set value = ? where name = ?;', (str(self.newAllPostId), 'all_post_id'))
 		conn.commit()
 		conn.close()
 		return True
@@ -145,15 +146,18 @@ def checkNewNicks(self):
 	"""
 		check any new posts for new nicknames	
 	"""
-	query = "select address, data from posts where post_id > " + self.savedAllPostId + " and data like 'nick:%'"
+	query = "select address, data from posts where post_id > " + str(self.savedAllPostId) + " and data like 'nick:%'"
+	print(query)
 	rows = putQuery(self, query)
+	print(rows)
 	if rows is False:
 		return False
 	conn = sqlite3.connect('coinflow.db')
 	c = conn.cursor()
-	for row in rows:
+	for row in rows['rows']:
 		c.execute('select id from nicks where address = ?;', (row[0],))
 		id = c.fetchone()
+		print(id,row[1], row[0])
 		if id is None:
 			c.execute('insert into nicks (nick, address) values (?,?);', (row[1].split(':',1)[1], row[0]))
 		else:
@@ -178,7 +182,7 @@ def pollFollowsPosts(self):
 		get the highest post id of posts made by our follows
 		compare to our stored id and report
 	"""
-	follows = getfollows(self)
+	follows = getFollows(self)
 	if not follows:
 		return False
 	followList = ''
@@ -200,9 +204,9 @@ def pollFollowsPosts(self):
 		self.savedFollowPostId = PostId[0]
 	if self.newFollowPostId > self.savedFollowPostId:
 		if self.savedFollowPostId == 0:
-			c.execute('insert into data values (?,?);', ('follow_post_id', self.newFollowPostId))
+			c.execute('insert into data values (?,?);', ('follow_post_id', str(self.newFollowPostId)))
 		else:
-			c.execute('update data set value = ? where name = ?;', (self.newFollowPostId, 'follow_post_id'))
+			c.execute('update data set value = ? where name = ?;', (str(self.newFollowPostId), 'follow_post_id'))
 		conn.commit()
 		conn.close()
 		return True
@@ -210,4 +214,21 @@ def pollFollowsPosts(self):
 		conn.close()
 		return False
 	
-	
+def displayFollowsPosts(self):
+	"""
+		display latest posts by your follows
+	"""
+	follows = getFollows(self)
+	if not follows:
+		return False
+	followList = ''
+	for follow in follows:
+		followList += follow[1] + ','
+	followList = followList[:1]
+	query = "select post_id, address, data, ts from posts where address in ('" + followList + "') and post_id > " + str(self.savedFollowPostId) + "order by ts desc"
+	rows = putQuery(self, query)
+	if rows is False:
+		return False
+	for row in rows['rows']:
+		self.writeConsole(getNick(self, row[1]) + " [ " + row[3] + ' ] ( ' + row[0] + ' ) >> ' + row[2].split(':',1)[1])
+	return

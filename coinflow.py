@@ -26,7 +26,7 @@ class CoinFlowApp(App):
 	tipAmount = 1
 	pollInterval = 60
 	
-	def poll(self):
+	def poll(self, value=False):
 		"""
 			This method polls the server to see if there's any new history to take action on
 		"""
@@ -43,9 +43,9 @@ class CoinFlowApp(App):
 			util.checkAllPosts(self)
 		
 		#check for new posts by our follows
-		if util.pollFollowPosts(self):
+		if util.pollFollowsPosts(self):
 			#if there's new ones, display them
-			util.displayFollowPosts(self)
+			util.displayFollowsPosts(self)
 			
 		
 	
