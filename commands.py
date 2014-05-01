@@ -28,6 +28,7 @@ def commandAdd(self, command):
 	conn.commit()
 	conn.close()
 	self.writeConsole('Agent created.\nAddress is ' + str(self.agentAddress) + '\nBalance is ' + str(self.agentBalance))
+	self.poll()
 	return
 			
 def commandLogin(self, command):
@@ -55,6 +56,7 @@ def commandLogin(self, command):
 	conn.commit()
 	conn.close()
 	self.writeConsole((('Logged in as ' + str(self.agentNick)) if len(self.agentNick) > 0 else ('Logged in'))  + '.\nAddress is ' + str(self.agentAddress) + '\nBalance is ' + str(self.agentBalance))
+	self.poll()
 	return
 			
 def commandTip(self, command):
@@ -119,7 +121,7 @@ def commandPost(self, command):
 		self.writeConsole('You need to supply the message to post.')
 		return
 	try:
-		response = self.agent.post(command[1])
+		response = self.agent.post('post:' + command[1])
 		if response['success'] == 1:
 			self.writeConsole('>> ' + str(command[1]) + '\nPost ID is ' + str(response['command_result']))
 		else:
@@ -146,7 +148,8 @@ def commandHistory(self, command):
 		self.writeConsole('No posts to display')
 		return
 	for row in rows['rows']:
-		self.writeConsole('Post ID: ' + str(row[0]) + ' Fee: ' + str(row[2]) + '\n>> ' + str(row[1]) + '\n')
+		post = row[1].split(':', 1)
+		self.writeConsole('Post ID: ' + str(row[0]) + ' Fee: ' + str(row[2]) + '\n>> ' + str(post[1]) + '\n')
 	return
 			
 def commandNick(self, command):
@@ -244,10 +247,7 @@ def commandListFollows(self, command):
 	if self.agent is None:
 		self.writeConsole('You don\'t have an active agent.\n/add an agent or /login in order to list the agents you follow.') 
 		return
-	conn = sqlite3.connect('coinflow.db') 
-	c = conn.cursor()
-	c.execute('select nick from follows where account=?;', (str(self.agentNick),))
-	follows = c.fetchall()
+	follows = util.getfollows(self)
 	if not follows:
 		self.writeConsole('You don\'t follow anyone yet')
 		return
@@ -266,6 +266,7 @@ def commandListProfiles(self, command):
 	c = conn.cursor()
 	c.execute('select nick, seed from profiles;')
 	profiles = c.fetchall()
+	conn.close()
 	if not profiles:
 		self.writeConsole('You don\'t have any profiles.\nAdd an agent to add a profile.')
 		return
@@ -273,8 +274,6 @@ def commandListProfiles(self, command):
 	for profile in profiles:
 		self.writeConsole(profile[0] + ' >> ' + profile[1])
 	return
-	
-		
 			
 		
 	

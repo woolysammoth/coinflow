@@ -7,6 +7,10 @@ def genDB():
 	c.execute('create table follows (id integer primary key, nick varchar(255), address varchar(35), account varchar(255));')
 
 	c.execute('create table profiles (id integer primary key, nick varchar(255), seed varchar(255));')
+	
+	c.execute('create table data (name varchar(255), value varchar(255));')
+	
+	c.execute('create table nicks (id integer primary key, nick varchar(255), address varchar(35));')
 
 	conn.commit()
 	conn.close()

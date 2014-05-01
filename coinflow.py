@@ -1,9 +1,11 @@
 import netvend.netvend as netvend
 import commands as com
+import util
 from kivy.app import App
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.label import Label
 from kivy.uix.textinput import TextInput
+from kivy.clock import Clock
 
 import os.path
 import dbCreate
@@ -22,6 +24,30 @@ class CoinFlowApp(App):
 	agent = None
 	allNicks = []
 	tipAmount = 1
+	pollInterval = 60
+	
+	def poll(self):
+		"""
+			This method polls the server to see if there's any new history to take action on
+		"""
+		if self.agent is None:
+			return
+		
+		#set the timer to poll every inteval
+		#set the clock so that we poll netvend every minute or so to find out new details
+		Clock.schedule_interval(self.poll, self.pollInterval)
+		
+		#check all posts to see if there has been activity
+		if util.pollAllPosts(self):
+			#if there has check the new posts for updatable information 
+			util.checkAllPosts(self)
+		
+		#check for new posts by our follows
+		if util.pollFollowPosts(self):
+			#if there's new ones, display them
+			util.displayFollowPosts(self)
+			
+		
 	
 	def sendCommand(self, instance, value=False):
 		"""
@@ -100,6 +126,7 @@ class CoinFlowApp(App):
 		#/settipammount - set the current tip amount
 		elif command[0].lower() == '/settipamount':
 			com.commandSetTipAmount(self, command)
+			
 						
 		#otherwise we don;t know what's goin on
 		else:
@@ -129,6 +156,7 @@ class CoinFlowApp(App):
 		self.input.bind(focus=self.sendCommand)	
 		self.root.add_widget(self.output)
 		self.root.add_widget(self.input)
+		
 		return self.root
 
 if __name__ == '__main__':
