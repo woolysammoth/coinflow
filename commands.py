@@ -315,7 +315,7 @@ def commandListFollows(self, command):
 	if self.agent is None:
 		self.writeConsole('You don\'t have an active agent.\n/add an agent or /login in order to list the agents you follow.') 
 		return
-	follows = util.getfollows(self)
+	follows = util.getFollows(self)
 	if not follows:
 		self.writeConsole('You don\'t follow anyone yet')
 		return
