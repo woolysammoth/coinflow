@@ -11,12 +11,12 @@ def commandAdd(self, command):
 	if len(command) < 2:
 		self.writeConsole('You need to supply a seed value')
 		return
-	util.getAgent(self, command)
+	self.agentSeed = command[1]
+	util.getAgent(self)
 	util.getAddress(self)
 	util.initialTip(self)
 	util.getBalance(self)
 	self.agentNick = util.getNick(self, self.agentAddress)
-	self.agentSeed = command[1]
 	conn = db.open()
 	c = conn.cursor()
 	c.execute('select id from profiles where seed=?;', (command[1],))
@@ -308,7 +308,7 @@ def commandListFollows(self, command):
 	if self.agent is None:
 		self.writeConsole('You don\'t have an active agent.\n/add an agent or /login in order to list the agents you follow.') 
 		return
-	follows = util.getfollows(self)
+	follows = util.getFollows(self)
 	if not follows:
 		self.writeConsole('You don\'t follow anyone yet')
 		return
@@ -336,6 +336,7 @@ def commandListProfiles(self, command):
 		self.writeConsole(profile[0])
 	return
 			
+<<<<<<< HEAD:commands/commands.py
 def commandFeed(self, command):
 	"""
 		Display any new posts from your followed agents
@@ -357,3 +358,7 @@ def commandChat(self, command):
 		return
 	if len(command[1]) < 2
 	
+=======
+		
+	
+>>>>>>> 9e1ce096c8a0bcf4b0811067b8775cf3b7e8037c:commands.py
