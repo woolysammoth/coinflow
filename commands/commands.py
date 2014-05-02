@@ -336,7 +336,6 @@ def commandListProfiles(self, command):
 		self.writeConsole(profile[0])
 	return
 			
-<<<<<<< HEAD:commands/commands.py
 def commandFeed(self, command):
 	"""
 		Display any new posts from your followed agents
@@ -356,9 +355,5 @@ def commandChat(self, command):
 	if self.agent is None:
 		self.writeConsole('You don\'t have an active agent.') 
 		return
-	if len(command[1]) < 2
-	
-=======
+	#if len(command[1]) < 2:
 		
-	
->>>>>>> 9e1ce096c8a0bcf4b0811067b8775cf3b7e8037c:commands.py
