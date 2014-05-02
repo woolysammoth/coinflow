@@ -1,6 +1,6 @@
 import netvend.netvend as netvend
-import util
-import sqlite3
+import util.util as util
+import util.db as db
 
 def commandAdd(self, command):
 	"""
@@ -17,7 +17,7 @@ def commandAdd(self, command):
 	util.getBalance(self)
 	self.agentNick = util.getNick(self, self.agentAddress)
 	self.agentSeed = command[1]
-	conn = sqlite3.connect('coinflow.db')
+	conn = db.open()
 	c = conn.cursor()
 	c.execute('select id from profiles where seed=?;', (command[1],))
 	id = c.fetchone()
@@ -25,13 +25,11 @@ def commandAdd(self, command):
 		c.execute('insert into profiles (nick, seed) values (?,?);', (str(self.agentNick), str(self.agentSeed)))
 	else:
 		c.execute('update profiles set nick=? where seed=?;', (str(self.agentNick), str(self.agentSeed)))
-	conn.commit()
-	conn.close()
+	db.close(conn)
 	self.writeConsole('Agent created.\nAddress is ' + str(self.agentAddress) + '\nBalance is ' + str(self.agentBalance))
 	#check for new nicknames
 	if util.pollAllPosts(self):
 		util.checkNewNicks(self) 
-	#self.poll()
 	return
 			
 def commandLogin(self, command):
@@ -53,7 +51,7 @@ def commandLogin(self, command):
 	util.getAddress(self)
 	util.getBalance(self)
 	self.agentNick = util.getNick(self, self.agentAddress)
-	conn = sqlite3.connect('coinflow.db')
+	conn = db.open()
 	c = conn.cursor()
 	c.execute('select id from profiles where seed=?;', (str(self.agentSeed),))
 	id = c.fetchone()
@@ -61,16 +59,13 @@ def commandLogin(self, command):
 		c.execute('insert into profiles (nick, seed) values (?,?);', (str(self.agentNick), str(self.agentSeed)))
 	else:
 		c.execute('update profiles set nick=? where seed=?;', (str(self.agentNick), str(self.agentSeed)))
-	conn.commit()
-	conn.close()
+	db.close(conn)
 	self.writeConsole((('Logged in as ' + str(self.agentNick)) if len(self.agentNick) > 0 else ('Logged in'))  + '.\nAddress is ' + str(self.agentAddress) + '\nBalance is ' + str(self.agentBalance))
 	#check for new nicknames
 	if util.pollAllPosts(self):
 		util.checkNewNicks(self)
 	#check for new posts from follows
-	if util.pollFollowsPosts(self):
-		util.displayFollowsPosts(self)
-	#self.poll()
+	commandFeed(self, command)
 	return
 			
 def commandTip(self, command):
@@ -230,7 +225,7 @@ def commandNick(self, command):
 		if response['success'] == 1:
 			self.writeConsole('(' + str(response['command_result']) + ') >> Set nickname to ' + str(command[1]))
 			self.agentNick = command[1]
-			conn = sqlite3.connect('coinflow.db')
+			conn = db.open()
 			c = conn.cursor()
 			c.execute('select id from profiles where seed=?;', (str(self.agentSeed),))
 			id = c.fetchone()
@@ -238,8 +233,7 @@ def commandNick(self, command):
 				c.execute('insert into profiles (nick, seed) values (?,?);', (str(self.agentNick), str(self.agentSeed)))
 			else:
 				c.execute('update profiles set nick=? where seed=?;', (str(self.agentNick), str(self.agentSeed)))
-			conn.commit()
-			conn.close()
+			db.close(conn)
 		else:
 			self.writeConsole('Setting nick failed')
 	except netvend.NetvendResponseError as e:
@@ -278,7 +272,7 @@ def commandFollow(self, command):
 	#update nicknames
 	if util.pollAllPosts(self):
 		util.checkNewNicks(self)
-	conn = sqlite3.connect('coinflow.db')
+	conn = db.open()
 	c = conn.cursor()
 	if util.isAddress(command[1]):
 		query = "select address from accounts where address = '" + command[1] + "';"
@@ -299,11 +293,10 @@ def commandFollow(self, command):
 	c.execute("select id from follows where address = ?;", (str(address),))
 	id = c.fetchone() 
 	if id is None:
-		c.execute("insert into follows (nick, address, account) values (?,?,?);", (str(nick), str(address), str(self.agentAddress)))
+		c.execute("insert into follows (nick, address, profile) values (?,?,?);", (str(nick), str(address), str(self.agentAddress)))
 	else:
-		c.execute("update follows set nick=? where address=? and account=?;", (str(nick), str(address), str(self.agentAddress)))
-	conn.commit()
-	conn.close()
+		c.execute("update follows set nick=? where address=? and profile=?;", (str(nick), str(address), str(self.agentAddress)))
+	db.close(conn)
 	self.writeConsole('You are now following ' + nick)
 	return
 	
@@ -330,11 +323,11 @@ def commandListProfiles(self, command):
 		each profile has been logged into at least once
 		you don't need to be logged in to view profiles 
 	"""
-	conn = sqlite3.connect('coinflow.db')
+	conn = db.open()
 	c = conn.cursor()
 	c.execute('select nick from profiles;')
 	profiles = c.fetchall()
-	conn.close()
+	db.close(conn)
 	if not profiles:
 		self.writeConsole('You don\'t have any profiles.\nAdd an agent to add a profile.')
 		return
@@ -343,5 +336,24 @@ def commandListProfiles(self, command):
 		self.writeConsole(profile[0])
 	return
 			
-		
+def commandFeed(self, command):
+	"""
+		Display any new posts from your followed agents
+	"""
+	if self.agent is None:
+		self.writeConsole('You don\'t have an active agent.') 
+		return
+	if util.pollFollowsPosts(self):
+		util.displayFollowsPosts(self)
+	return
+	
+def commandChat(self, command):
+	"""
+		send a post with the chat: prefix
+		tip the user 1 mu-sat and reference the post id
+	"""
+	if self.agent is None:
+		self.writeConsole('You don\'t have an active agent.') 
+		return
+	if len(command[1]) < 2
 	

@@ -1,9 +1,10 @@
 import netvend.netvend as netvend
+import db as db
 import sqlite3
 
 def getAgent(self):
 	"""
-		connect to nedvend agent using the specified seed
+		connect to netvend agent using the specified seed
 		agent is created if it doesn't already exist
 	"""
 	try:
@@ -27,7 +28,8 @@ def initialTip(self):
 		send a tip from the correct horse battery staple agent to get the new agent funded
 	"""
 	try:
-		response = self.chbsagent.tip(self.agentAddress, netvend.convert_value(1, 'satoshi', 'usat'), None)
+		chbsagent = netvend.Agent('correct horse battery staple', seed=True)
+		response = chbsagent.tip(self.agentAddress, netvend.convert_value(10, 'satoshi', 'usat'), None)
 	except netvend.NetvendResponseError as e:
 		self.writeConsole('Failed to tip new agent - ' + str(e))
 	return
@@ -63,11 +65,11 @@ def getNick(self, address):
 	"""
 		get the nickname associated with the specified address
 	"""
-	conn = sqlite3.connect('coinflow.db')
+	conn = db.open()
 	c = conn.cursor()
 	c.execute('select nick from nicks where address = ?;', (address,))
 	nick = c.fetchone()
-	conn.close()
+	db.close(conn)
 	if nick is None:
 		return address
 	else:
@@ -108,9 +110,9 @@ def pollAllPosts(self):
 	if rows is False:
 		return False
 	self.newAllPostId = rows['rows'][0][0]
-	conn = sqlite3.connect('coinflow.db')
+	conn = db.open()
 	c = conn.cursor()
-	c.execute('select value from data where name=?;', ('all_post_id',))
+	c.execute('select value from data where name=? and profile=?;', ('all_post_id',str(self.agentAddress)))
 	PostId = c.fetchone()
 	if PostId is None:
 		self.savedAllPostId = 0
@@ -118,14 +120,13 @@ def pollAllPosts(self):
 		self.savedAllPostId = PostId[0]
 	if self.newAllPostId > self.savedAllPostId:
 		if self.savedAllPostId == 0:
-			c.execute('insert into data values (?,?);', ('all_post_id', str(self.newAllPostId)))
+			c.execute('insert into data values (?,?,?);', ('all_post_id', str(self.newAllPostId), str(self.agentAddress)))
 		else:
-			c.execute('update data set value = ? where name = ?;', (str(self.newAllPostId), 'all_post_id'))
-		conn.commit()
-		conn.close()
+			c.execute('update data set value = ? where name = ? and profile = ?;', (str(self.newAllPostId), 'all_post_id', str(self.agentAddress)))
+		db.close(conn)
 		return True
 	else:
-		conn.close()
+		db.close(conn)
 		return False
 		
 def checkAllPosts(self):
@@ -142,7 +143,7 @@ def checkNewNicks(self):
 	rows = putQuery(self, query)
 	if rows is False:
 		return False
-	conn = sqlite3.connect('coinflow.db')
+	conn = db.open()
 	c = conn.cursor()
 	for row in rows['rows']:
 		c.execute('select id from nicks where address = ?;', (row[0],))
@@ -158,8 +159,7 @@ def checkNewNicks(self):
 		if checkNick is not None:
 			if nick[1] != checkNick[0]:
 				c.execute('update follows set nick=? where address=?;', (nick[1], row[0]))
-	conn.commit()
-	conn.close()
+	db.close(conn)
 	return		
 		
 def getFollows(self):
@@ -169,11 +169,11 @@ def getFollows(self):
 	"""
 	if pollAllPosts(self):
 		checkNewNicks(self)
-	conn = sqlite3.connect('coinflow.db')
+	conn = db.open()
 	c = conn.cursor()
-	c.execute('select nick, address from follows where account = ?;', (str(self.agentAddress),))
+	c.execute('select nick, address from follows where profile=?;', (str(self.agentAddress),))
 	follows = c.fetchall()
-	conn.close()
+	db.close(conn)
 	return follows
 	
 def pollFollowsPosts(self):
@@ -192,9 +192,9 @@ def pollFollowsPosts(self):
 	if rows is False:
 		return False
 	self.newFollowPostId = rows['rows'][0][0]
-	conn = sqlite3.connect('coinflow.db')
+	conn = db.open()
 	c = conn.cursor()
-	c.execute('select value from data where name=?;', ('follow_post_id',))
+	c.execute('select value from data where name=? and profile=?;', ('follow_post_id',str(self.agentAddress)))
 	PostId = c.fetchone()
 	if PostId is None:
 		self.savedFollowPostId = 0
@@ -202,14 +202,13 @@ def pollFollowsPosts(self):
 		self.savedFollowPostId = PostId[0]
 	if self.newFollowPostId > self.savedFollowPostId:
 		if self.savedFollowPostId == 0:
-			c.execute('insert into data values (?,?);', ('follow_post_id', str(self.newFollowPostId)))
+			c.execute('insert into data values (?,?,?);', ('follow_post_id', str(self.newFollowPostId),str(self.agentAddress)))
 		else:
-			c.execute('update data set value = ? where name = ?;', (str(self.newFollowPostId), 'follow_post_id'))
-		conn.commit()
-		conn.close()
+			c.execute('update data set value=? where name=? and profile=?;', (str(self.newFollowPostId), 'follow_post_id',str(self.agentAddress)))
+		db.close(conn)
 		return True
 	else:
-		conn.close()
+		db.close(conn)
 		return False
 	
 def displayFollowsPosts(self):
@@ -242,7 +241,7 @@ def getSeedFromNick(nick):
 		nick is automatically the address if no nick is set
 		return False if nick not found
 	"""
-	conn = sqlite3.connect('coinflow.db')
+	conn = db.open()
 	c = conn.cursor()
 	c.execute('select seed from profiles where nick=?;', (nick,))
 	data = c.fetchone()
@@ -258,7 +257,7 @@ def getAddressFromNick(nick):
 		nick is automatically the address if no nick is set
 		return False if nick not found
 	"""
-	conn = sqlite3.connect('coinflow.db')
+	conn = db.open()
 	c = conn.cursor()
 	c.execute('select address from nicks where nick=?;', (nick,))
 	data = c.fetchone()

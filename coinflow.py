@@ -1,16 +1,16 @@
 import netvend.netvend as netvend
-import commands as com
-import util
+import commands.commands as com
+import util.util as util
+import os.path
+import util.db as db
 from kivy.app import App
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.label import Label
 from kivy.uix.textinput import TextInput
 from kivy.clock import Clock
 
-import os.path
-import dbCreate
-if not os.path.isfile('coinflow.db'):
-	dbCreate.genDB()
+if not os.path.isfile('store.dat'):
+	db.gen()
 
 
 class CoinFlowApp(App):
@@ -20,34 +20,9 @@ class CoinFlowApp(App):
 		agent starts off as None to indicate a logged out state
 	"""
 	
-	chbsagent = netvend.Agent('correct horse battery staple', seed=True)
 	agent = None
 	allNicks = []
-	tipAmount = 1
-	pollInterval = 60
-	
-	def poll(self, value=False):
-		"""
-			This method polls the server to see if there's any new history to take action on
-		"""
-		if self.agent is None:
-			return
-		
-		#set the timer to poll every inteval
-		#set the clock so that we poll netvend every minute or so to find out new details
-		Clock.schedule_interval(self.poll, self.pollInterval)
-		
-		#check all posts to see if there has been activity
-		#if util.pollAllPosts(self):
-			#if there has check the new posts for updatable information 
-			#util.checkAllPosts(self)
-		
-		#check for new posts by our follows
-		if util.pollFollowsPosts(self):
-			#if there's new ones, display them
-			util.displayFollowsPosts(self)
-			
-		
+	tipAmount = 10		
 	
 	def sendCommand(self, instance, value=False):
 		"""
@@ -127,13 +102,24 @@ class CoinFlowApp(App):
 		#/gettipammount - get the current tip amount
 		elif command[0].lower() == '/gettipamount':
 			com.commandGetTipAmount(self, command)
+			return
 			
-		#/settipammount - set the current tip amount
+		#/settipammount [amount] - set the current tip amount
 		elif command[0].lower() == '/settipamount':
 			com.commandSetTipAmount(self, command)
+			return
+			
+		#/feed - update the feed of posts from your followed agents
+		elif command[0].lower() == '/feed':
+			com.commandFeed(self, command)
+			return
+			
+		#/chat [nick / address] [message] - send a public message to the specified agent
+		elif command[0].lower() == '/chat':
+			com.commandChat(self, command)
 			
 						
-		#otherwise we don;t know what's goin on
+		#otherwise we don't know what's going on
 		else:
 			self.writeConsole(command[0] + ' is not a recognised command')
 			return
