@@ -1,16 +1,2 @@
-certain actions are prohibitively expensive eg. listing agents or checking nicknames for uniqueness.
-check nick for uniqueness:
-	get list of every account (4000)
-	for each account:
-		find the last nick: post (3000)
-		
-so for 10 users we are looking at 34000 musat
-for 100 users we are looking at 30400 musat etc.
-as the network grows these costs could become huge
-	
-	
-instead we could build the initial list of nicknames
-poll the database to find the highest post id (1004)
-if the highest post_id is more than our last known post_id, request all posts since that point
-scan the data and update nicks accordingly
+
 	

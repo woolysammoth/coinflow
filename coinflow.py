@@ -38,9 +38,9 @@ class CoinFlowApp(App):
 		Clock.schedule_interval(self.poll, self.pollInterval)
 		
 		#check all posts to see if there has been activity
-		if util.pollAllPosts(self):
+		#if util.pollAllPosts(self):
 			#if there has check the new posts for updatable information 
-			util.checkAllPosts(self)
+			#util.checkAllPosts(self)
 		
 		#check for new posts by our follows
 		if util.pollFollowsPosts(self):
@@ -74,14 +74,19 @@ class CoinFlowApp(App):
 			com.commandAdd(self, command)
 			return
 			
-		#/login [seed] - login as an existing agent
+		#/login [nickname / address / seed] - login as an existing agent
 		elif command[0].lower() == '/login':
 			com.commandLogin(self, command)
 			return
 			
-		#/tip [address] - send a tip to another user or post
+		#/tip [nickname / address] - send a tip to another user or post
 		elif command[0].lower() == '/tip':
 			com.commandTip(self, command)
+			return
+			
+		#/balance - view the balance of your current agent
+		elif command[0].lower() == '/balance':
+			com.commandBalance(self, command)
 			return
 		
 		#/post [message] - post a message to netvend		
@@ -151,7 +156,7 @@ class CoinFlowApp(App):
 		"""
 	
 		self.root = BoxLayout(orientation='vertical')
-		self.output = TextInput(size_hint=(1,.9), background_color=[0,0,0,0], foreground_color=[1,1,1,1], readonly=True, text='Welcome to CoinFlow\n===================\n\n/add [seed value] will create a new agent.\n/login [seed value] will login to an existing agent\n/nick [nickname] sets your agents nickname.\n/post [message] will post a message to netvend.\n/tip [nickname/address/post_id] will send a tip\n\n/help for more.\n\nHave fun!\n\n')
+		self.output = TextInput(size_hint=(1,.9), background_color=[0,0,0,0], foreground_color=[1,1,1,1], readonly=True, text='Welcome to CoinFlow\n===================\n\n/add [seed value] will create a new agent.\n/login [nickname/address/seed value] will login to an existing agent\n/nick [nickname] sets your agents nickname.\n/post [message] will post a message to netvend.\n/tip [nickname/address/post_id] will send a tip\n\nHave fun!\n\n')
 		self.input = TextInput(size_hint_y=None, height=30, multiline=False, focus=True)
 		self.input.bind(focus=self.sendCommand)	
 		self.root.add_widget(self.output)
