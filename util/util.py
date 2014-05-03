@@ -38,8 +38,9 @@ def getBalance(self):
 	"""
 		get the balance for the logged in agent
 	"""
+	self.unit = getSetting(self, 'unit', 'satoshi')
 	try:
-		self.agentBalance = self.agent.fetch_balance()
+		self.agentBalance = netvend.convert_value(self.agent.fetch_balance(), 'usat', self.unit)
 	except netvend.NetvendResponseError:
 		self.agentBalance = 0
 	return
@@ -52,7 +53,7 @@ def putQuery(self, query):
 		response = self.agent.query(query)
 	except netvend.NetvendResponseError as e:
 		if 'f:' in str(e):
-			self.writeConsole('Not enough funds for query - ' + query)
+			self.writeConsole('Not enough funds for query - ' + str(e) + ' - ' + query)
 		else:
 			self.writeConsole('Query error - ' + str(e) + ' - ' + query)
 		return False
@@ -277,3 +278,33 @@ def getAddressFromPostID(self, postId):
 	if rows is False:
 		return False
 	return rows['rows'][0][0]
+	
+def getSetting(self, name, default):
+	"""
+		return a settings value from the database
+		return default if no value exists
+	"""
+	conn = db.open()
+	c = conn.cursor()
+	c.execute('select value from settings where name=? and profile=?;', (str(name), str(self.agentAddress)))
+	data = c.fetchone()
+	db.close(conn)
+	if data is None:
+		return default
+	else:
+		return data[0]
+		
+def setSetting(self, name, value):
+	"""
+		set the value of the named setting to value
+	"""
+	conn = db.open()
+	c = conn.cursor()
+	c.execute('select value from settings where name=? and profile=?;', (str(name), str(self.agentAddress)))
+	data = c.fetchone()
+	if data is None:
+		c.execute('insert into settings values (?,?,?);', (str(name), str(value), str(self.agentAddress)))
+	else:
+		c.execute('update settings set value=? where name=? and profile=?;', (str(value), str(name), str(self.agentAddress)))
+	db.close(conn)
+	return

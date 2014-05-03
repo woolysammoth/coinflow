@@ -20,9 +20,11 @@ class CoinFlowApp(App):
 		agent starts off as None to indicate a logged out state
 	"""
 	
+	#initialse some properties
 	agent = None
 	allNicks = []
-	tipAmount = 10		
+	unit = 'satoshi'
+	tipAmount = 1
 	
 	def sendCommand(self, instance, value=False):
 		"""
@@ -112,6 +114,16 @@ class CoinFlowApp(App):
 		#/feed - update the feed of posts from your followed agents
 		elif command[0].lower() == '/feed':
 			com.commandFeed(self, command)
+			return
+			
+		#/getunit - show the currency display unit
+		elif command[0].lower() == '/getunit':
+			com.commandGetUnit(self, command)
+			return
+			
+		#/setunit - set the currency display unit
+		elif command[0].lower() == '/setunit':
+			com.commandSetUnit(self, command)
 			return
 			
 		#/chat [nick / address] [message] - send a public message to the specified agent

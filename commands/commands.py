@@ -97,7 +97,7 @@ def commandTip(self, command):
 			return
 		postId = command[1]
 	try:
-		response = self.agent.tip(tipAddress, int(self.tipAmount), postId)
+		response = self.agent.tip(tipAddress, netvend.convert_value(self.tipAmount, self.unit, 'usat'), postId)
 		if response['success'] == 1:
 			try:
 				self.agentBalance = self.agent.fetch_balance()
@@ -114,26 +114,29 @@ def commandTip(self, command):
 def commandGetTipAmount(self, command):
 	"""
 		display the current tip amount
+		stored in the settings table and unique to each profile
 	"""
 	if self.agent is None:
 		self.writeConsole('You don\'t have an active agent.\n/add an agent or /login in order to view tip information.')
 		return
-	self.writeConsole('Current Tip Amount is ' + str(self.tipAmount) + ' musat')
+	self.tipAmount = util.getSetting(self, 'tipAmount', 1)
+	self.writeConsole('Current Tip Amount is ' + str(self.tipAmount) + ' ' + str(self.unit))
 	return
 
 def commandSetTipAmount(self, command):
 	"""
 		set the current tip amount
-		only in musat for the moment
+		save to the settings table
 	"""
 	if self.agent is None:
 		self.writeConsole('You don\'t have an active agent.\n/add an agent or /login in order to set tip information.')
 		return
 	if len(command) < 2:
-		self.writeConsole('You need to supply the new tip amount in musat.')
+		self.writeConsole('You need to supply the new tip amount in ' + str(self.unit))
 		return
 	self.tipAmount = command[1]
-	self.writeConsole('Tip amount has been set to ' + str(command[1]) + ' musat.')
+	util.setSetting(self, name, self.tipAmount)
+	self.writeConsole('Tip amount has been set to ' + str(self.tipAmount) + ' ' + str(self.unit))
 	return
 	
 def commandBalance(self, command):
@@ -144,7 +147,7 @@ def commandBalance(self, command):
 		self.writeConsole('You don\'t have an active agent.\nYou need to be logged in to view your balance.') 
 		return
 	util.getBalance(self)
-	self.writeConsole('Balance is ' + str(self.agentBalance))
+	self.writeConsole('Balance is ' + str(self.agentBalance) + ' ' + str(self.unit))
 	return
 			
 def commandPost(self, command):
@@ -345,6 +348,37 @@ def commandFeed(self, command):
 		return
 	if util.pollFollowsPosts(self):
 		util.displayFollowsPosts(self)
+	return
+	
+def commandGetUnit(self, command):
+	"""
+		display the current display unit
+		stored in the settings table and unique to each profile
+	"""
+	if self.agent is None:
+		self.writeConsole('You don\'t have an active agent.')
+		return
+	self.unit = util.getSetting(self, 'unit', 'satoshi')
+	self.writeConsole('Current display unit is ' + str(self.unit))
+	return
+
+def commandSetUnit(self, command):
+	"""
+		set the current display unit
+		save to the settings table
+	"""
+	if self.agent is None:
+		self.writeConsole('You don\'t have an active agent.')
+		return
+	if len(command) < 2:
+		self.writeConsole('You need to supply the new display unit.')
+		return
+	availableUnits = ['btc','mbit','ubit','satoshi','msat','usat']
+	if command[1].lower() not in availableUnits:
+		self.writeConsole('The unit you entered is not known.\nAcceptible values are ' + str(availableUnits))
+	self.unit = command[1].lower()
+	util.setSetting(self, 'unit', self.unit)
+	self.writeConsole('Display unit has been set ' + str(self.unit))
 	return
 	
 def commandChat(self, command):

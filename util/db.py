@@ -19,6 +19,8 @@ def gen():
 	c.execute('create table data (name varchar(255), value varchar(255), profile varchar(255));')
 	
 	c.execute('create table nicks (id integer primary key, nick varchar(255), address varchar(35));')
+	
+	c.execute('create table settings (name varchar(255), value varchar(255), profile varchar(255));')
 
 	close(conn)
 	return
