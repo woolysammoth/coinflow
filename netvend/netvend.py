@@ -38,27 +38,27 @@ except ImportError:
 NETVEND_URL = "http://ec2-54-213-176-154.us-west-2.compute.amazonaws.com/command.php"
 
 def unit_pow(unit):
-	"""
-		1 BTC 	= 1000 mbit
-				= 100000 ubit
-				= 100000000 satoshi
-				= 100000000000 msat
-				= 10000000000000 usat
-	"""
-	if unit.lower().startswith("usat"): 
-		return 0
-	elif unit.lower().startswith("msat"):
-		return 3
-	elif unit.lower().startswith("sat"):
-		return 6
-	elif unit.lower() == "ubtc" or unit.lower() == "ubit":
-		return 8
-	elif unit.lower() == "mbtc" or unit.lower() == "mbit":
-		return 11
-	elif unit.lower() == "btc":
-		return 14
-	else:
-		raise ValueError("cannot recognize unit")
+    """
+        1 BTC     = 1000 mbit
+                = 100000 ubit
+                = 100000000 satoshi
+                = 100000000000 msat
+                = 10000000000000 usat
+    """
+    if unit.lower().startswith("usat"): 
+        return 0
+    elif unit.lower().startswith("msat"):
+        return 3
+    elif unit.lower().startswith("sat"):
+        return 6
+    elif unit.lower() == "ubtc" or unit.lower() == "ubit":
+        return 8
+    elif unit.lower() == "mbtc" or unit.lower() == "mbit":
+        return 11
+    elif unit.lower() == "btc":
+        return 14
+    else:
+        raise ValueError("cannot recognize unit")
 
 def convert_value(amount, from_unit, to_unit):
     from_pow = unit_pow(from_unit)

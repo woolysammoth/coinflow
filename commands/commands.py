@@ -2,6 +2,7 @@ import netvend.netvend as netvend
 import util.util as util
 import util.db as db
 
+
 def commandAdd(self, command):
 	"""
 		Add a new agent
@@ -26,12 +27,15 @@ def commandAdd(self, command):
 	else:
 		c.execute('update profiles set nick=? where seed=?;', (str(self.agentNick), str(self.agentSeed)))
 	db.close(conn)
-	self.writeConsole('Agent created.\nAddress is ' + str(self.agentAddress) + '\nBalance is ' + str(self.agentBalance))
+	self.writeConsole(
+		'Agent created.\nAddress is ' + str(self.agentAddress) + '\nBalance is ' + str(self.agentBalance) + ' ' + str(
+			self.unit))
 	#check for new nicknames
 	if util.pollAllPosts(self):
-		util.checkNewNicks(self) 
+		util.checkNewNicks(self)
 	return
-			
+
+
 def commandLogin(self, command):
 	"""
 		Login as an existing agent
@@ -40,7 +44,8 @@ def commandLogin(self, command):
 		check profiles and update or insert
 	"""
 	if len(command) < 2:
-		self.writeConsole('You need to supply some detail for the agent you want to login as.\nCould be the agents nickname, address or seed')
+		self.writeConsole(
+			'You need to supply some detail for the agent you want to login as.\nCould be the agents nickname, address or seed')
 		return
 	seed = util.getSeedFromNick(command[1])
 	if seed is False:
@@ -60,21 +65,23 @@ def commandLogin(self, command):
 	else:
 		c.execute('update profiles set nick=? where seed=?;', (str(self.agentNick), str(self.agentSeed)))
 	db.close(conn)
-	self.writeConsole((('Logged in as ' + str(self.agentNick)) if len(self.agentNick) > 0 else ('Logged in'))  + '.\nAddress is ' + str(self.agentAddress) + '\nBalance is ' + str(self.agentBalance))
+	self.writeConsole((('Logged in as ' + str(self.agentNick)) if len(self.agentNick) > 0 else (
+		'Logged in')) + '.\nAddress is ' + str(self.agentAddress) + '\nBalance is ' + str(self.agentBalance) + ' ' + str(
+		self.unit))
 	#check for new nicknames
 	if util.pollAllPosts(self):
 		util.checkNewNicks(self)
 	#check for new posts from follows
 	commandFeed(self, command)
 	return
-			
+
+
 def commandTip(self, command):
 	"""
 		Tip a nickname, address or post_id
 		nickname tipping still in progress
 	"""
-	if self.agent is None:
-		self.writeConsole('You don\'t have an active agent.\n/add an agent or /login in order to tip.')
+	if not util.checkLogin(self):
 		return
 	elif len(command) < 2:
 		self.writeConsole('You need to supply the detail of the agent or post you wish to tip.')
@@ -103,59 +110,61 @@ def commandTip(self, command):
 				self.agentBalance = self.agent.fetch_balance()
 			except netvend.NetvendResponseError as e:
 				self.agentBalance = 0
-			self.writeConsole('Tip successful.\nTip ID : ' + str(response['command_result']) + ' - New Balance : ' + str(self.agentBalance))
+			self.writeConsole(
+				'Tip successful.\nTip ID : ' + str(response['command_result']) + ' - New Balance : ' + str(
+					self.agentBalance))
 		else:
 			self.writeConsole('Tip Failed')
 			return
 	except netvend.NetvendResponseError as e:
 		self.writeConsole('Tip failed - ' + str(e))
 	return
-	
+
+
 def commandGetTipAmount(self, command):
 	"""
 		display the current tip amount
 		stored in the settings table and unique to each profile
 	"""
-	if self.agent is None:
-		self.writeConsole('You don\'t have an active agent.\n/add an agent or /login in order to view tip information.')
+	if not util.checkLogin(self):
 		return
 	self.tipAmount = util.getSetting(self, 'tipAmount', 1)
 	self.writeConsole('Current Tip Amount is ' + str(self.tipAmount) + ' ' + str(self.unit))
 	return
+
 
 def commandSetTipAmount(self, command):
 	"""
 		set the current tip amount
 		save to the settings table
 	"""
-	if self.agent is None:
-		self.writeConsole('You don\'t have an active agent.\n/add an agent or /login in order to set tip information.')
+	if not util.checkLogin(self):
 		return
 	if len(command) < 2:
 		self.writeConsole('You need to supply the new tip amount in ' + str(self.unit))
 		return
 	self.tipAmount = command[1]
-	util.setSetting(self, name, self.tipAmount)
+	util.setSetting(self, 'tipAmount', self.tipAmount)
 	self.writeConsole('Tip amount has been set to ' + str(self.tipAmount) + ' ' + str(self.unit))
 	return
-	
+
+
 def commandBalance(self, command):
 	"""
 		display the balance of the currently logged in agent
 	"""
-	if self.agent is None:
-		self.writeConsole('You don\'t have an active agent.\nYou need to be logged in to view your balance.') 
+	if not util.checkLogin(self):
 		return
 	util.getBalance(self)
 	self.writeConsole('Balance is ' + str(self.agentBalance) + ' ' + str(self.unit))
 	return
-			
+
+
 def commandPost(self, command):
 	"""
 		Post a message to netvend
 	"""
-	if self.agent is None:
-		self.writeConsole('You don\'t have an active agent.\n/add an agent or /login in order to post.') 
+	if not util.checkLogin(self):
 		return
 	if len(command) < 2:
 		self.writeConsole('You need to supply the message to post.')
@@ -169,14 +178,14 @@ def commandPost(self, command):
 	except netvend.NetvendResponseError as e:
 		self.writeConsole('Post failed - ' + str(e))
 	return
-		
+
+
 def commandHistory(self, command):
 	"""
 		Display the last ten posts for the specified user
 		the users current agents posts are shown if no address/nick is given
 	"""
-	if self.agent is None:
-		self.writeConsole('You don\'t have an active agent.\n/add an agent or /login in order to view history.') 
+	if not util.checkLogin(self):
 		return
 	if len(command) < 2:
 		address = self.agentAddress
@@ -190,7 +199,8 @@ def commandHistory(self, command):
 			address = address
 			nick = command[1]
 	self.writeConsole('\n== Last 10 Posts for ' + nick + ' ==\n')
-	query = "select posts.post_id, posts.data, history.fee from posts inner join history on posts.history_id = history.history_id where posts.address = '" + str(address) + "' order by posts.ts asc limit 10"
+	query = "select posts.post_id, posts.data, history.fee from posts inner join history on posts.history_id = history.history_id where posts.address = '" + str(
+		address) + "' order by posts.ts asc limit 10"
 	rows = util.putQuery(self, query)
 	if rows is False:
 		self.writeConsole('No posts to display')
@@ -199,10 +209,11 @@ def commandHistory(self, command):
 		if 'post:' in row[1]:
 			post = row[1].split(':', 1)[1]
 		else:
-			post = row[1]
+			continue
 		self.writeConsole('Post ID: ' + str(row[0]) + ' Fee: ' + str(row[2]) + '\n>> ' + str(post) + '\n')
 	return
-			
+
+
 def commandNick(self, command):
 	"""
 		set a nickname for the user
@@ -210,8 +221,7 @@ def commandNick(self, command):
 		update profile
 		update the list of nicks first
 	"""
-	if self.agent is None:
-		self.writeConsole('You don\'t have an active agent.\n/add an agent or /login in order to set your nickname.') 
+	if not util.checkLogin(self):
 		return
 	if len(command) < 2:
 		self.writeConsole('You need to specify a nickname')
@@ -243,13 +253,13 @@ def commandNick(self, command):
 		self.writeConsole('Setting nick failed - ' + str(e))
 	return
 
+
 def commandListAgents(self, command):
 	"""
 		List all users in the system
 		update the list of nicks first
 	"""
-	if self.agent is None:
-		self.writeConsole('You don\'t have an active agent.\n/add an agent or /login in order to list agents.') 
+	if not util.checkLogin(self):
 		return
 	#update nicknames
 	if util.pollAllPosts(self):
@@ -259,15 +269,15 @@ def commandListAgents(self, command):
 	for nick in self.allNicks:
 		self.writeConsole(nick)
 	return
-	
+
+
 def commandFollow(self, command):
 	"""
 		Follow the specified agent
 		can specify address or nick
 		update the list of nicks first
 	"""
-	if self.agent is None:
-		self.writeConsole('You don\'t have an active agent.\n/add an agent or /login in order to follow agents.') 
+	if not util.checkLogin(self):
 		return
 	if len(command) < 2:
 		self.writeConsole('You need to specify an agent to follow')
@@ -294,22 +304,24 @@ def commandFollow(self, command):
 		address = address[0]
 		nick = command[1]
 	c.execute("select id from follows where address = ?;", (str(address),))
-	id = c.fetchone() 
+	id = c.fetchone()
 	if id is None:
-		c.execute("insert into follows (nick, address, profile) values (?,?,?);", (str(nick), str(address), str(self.agentAddress)))
+		c.execute("insert into follows (nick, address, profile) values (?,?,?);",
+				  (str(nick), str(address), str(self.agentAddress)))
 	else:
-		c.execute("update follows set nick=? where address=? and profile=?;", (str(nick), str(address), str(self.agentAddress)))
+		c.execute("update follows set nick=? where address=? and profile=?;",
+				  (str(nick), str(address), str(self.agentAddress)))
 	db.close(conn)
 	self.writeConsole('You are now following ' + nick)
 	return
-	
+
+
 def commandListFollows(self, command):
 	"""
 		List all the agents you are following
 		update the list of nicks first
 	"""
-	if self.agent is None:
-		self.writeConsole('You don\'t have an active agent.\n/add an agent or /login in order to list the agents you follow.') 
+	if not util.checkLogin(self):
 		return
 	follows = util.getFollows(self)
 	if not follows:
@@ -319,6 +331,7 @@ def commandListFollows(self, command):
 	for follow in follows:
 		self.writeConsole(follow[0])
 	return
+
 
 def commandListProfiles(self, command):
 	"""
@@ -338,56 +351,108 @@ def commandListProfiles(self, command):
 	for profile in profiles:
 		self.writeConsole(profile[0])
 	return
-			
+
+
 def commandFeed(self, command):
 	"""
 		Display any new posts from your followed agents
 	"""
-	if self.agent is None:
-		self.writeConsole('You don\'t have an active agent.') 
+	if not util.checkLogin(self):
 		return
 	if util.pollFollowsPosts(self):
 		util.displayFollowsPosts(self)
 	return
-	
+
+
 def commandGetUnit(self, command):
 	"""
 		display the current display unit
 		stored in the settings table and unique to each profile
 	"""
-	if self.agent is None:
-		self.writeConsole('You don\'t have an active agent.')
+	if not util.checkLogin(self):
 		return
 	self.unit = util.getSetting(self, 'unit', 'satoshi')
 	self.writeConsole('Current display unit is ' + str(self.unit))
 	return
+
 
 def commandSetUnit(self, command):
 	"""
 		set the current display unit
 		save to the settings table
 	"""
-	if self.agent is None:
-		self.writeConsole('You don\'t have an active agent.')
+	if not util.checkLogin(self):
 		return
 	if len(command) < 2:
 		self.writeConsole('You need to supply the new display unit.')
 		return
-	availableUnits = ['btc','mbit','ubit','satoshi','msat','usat']
+	availableUnits = ['btc', 'mbit', 'ubit', 'satoshi', 'msat', 'usat']
 	if command[1].lower() not in availableUnits:
-		self.writeConsole('The unit you entered is not known.\nAcceptible values are ' + str(availableUnits))
+		self.writeConsole('The unit you entered is not known.\nAcceptable values are ' + str(availableUnits))
+		return
 	self.unit = command[1].lower()
 	util.setSetting(self, 'unit', self.unit)
-	self.writeConsole('Display unit has been set ' + str(self.unit))
+	self.writeConsole('Display unit has been set to ' + str(self.unit))
 	return
-	
+
+
 def commandChat(self, command):
 	"""
-		send a post with the chat: prefix
-		tip the user 1 mu-sat and reference the post id
+		Set the self.isChat property to true
+		True means that any input test is sent as a chat post
 	"""
-	if self.agent is None:
-		self.writeConsole('You don\'t have an active agent.') 
+	if not util.checkLogin(self):
 		return
-	#if len(command[1]) < 2:
+	#send a post to indicate that chat was joined
+	try:
+		self.agent.post('chatting:True')
+	except netvend.NetvendResponseError as e:
+		self.writeConsole('Failed to set chat - ' + str(e))
+		return False
+	self.isChat = True
+	#get the list of agents who are currently chatting
+	self.writeConsole('\n=== Currently chatting ===')
+	chatList = util.getChatters(self)
+	for chatter in chatList:
+		self.writeConsole(chatter)
+	self.writeConsole('\nEnter /chat again to stop chatting\n')
+	#get and print the 5 posts previous to our joining
+	query = "select post_id, address, data from posts where data like 'chat:%' order by ts asc limit 5"
+	posts = util.putQuery(self, query)
+	if posts is not False:
+		for post in posts['rows']:
+			self.writeConsole(util.getNick(self, post[1]) + ' (' + post[0] + ') >> ' + post[2].split(':',1)[1])
+			chatPostId = post[0]
+	db.setData(self, 'chat_post_id', chatPostId)
+	self.togglePoll(True)
+	return True
+
+
+def commandSendChat(self, message):
+	"""
+		send the message as a chat post
+		check to see if the message is '/chat' and end the chat session if it is
+	"""
+	if not util.checkLogin(self):
+		return
+	if message == '/chat':
+		#send a post to indicate that chat was left
+		try:
+			self.agent.post('chatting:True')
+		except netvend.NetvendResponseError as e:
+			self.writeConsole('Failed to leave chat - ' + str(e))
+			return False
+		self.isChat = False
+		self.writeConsole('Chat is disabled')
+		return
+	try:
+		response = self.agent.post('chat:' + str(message))
+		if response['success'] == 1:
+			self.writeConsole('(' + str(response['command_result']) + ') >> ' + str(message))
+		else:
+			self.writeConsole('Chat failed')
+	except netvend.NetvendResponseError as e:
+		self.writeConsole('Chat failed - ' + str(e))
+	return
+	
 		

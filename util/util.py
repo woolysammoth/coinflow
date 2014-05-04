@@ -1,6 +1,19 @@
 import netvend.netvend as netvend
 import db as db
-import sqlite3
+
+
+def checkLogin(self):
+	"""
+		check for an active agent.
+		return True if one is found
+		False otherwise
+	"""
+	if self.agent is None:
+		self.writeConsole('You do not have an active agent.')
+		return False
+	else:
+		return True
+
 
 def getAgent(self):
 	"""
@@ -12,7 +25,8 @@ def getAgent(self):
 	except netvend.NetvendResponseError as e:
 		self.writeConsole('Failed to get agent - ' + str(e))
 	return
-	
+
+
 def getAddress(self):
 	"""
 		get the address for the currently logged in agent
@@ -22,7 +36,8 @@ def getAddress(self):
 	except netvend.NetvendResponseError as e:
 		self.writeConsole('Failed to get address - ' + str(e))
 	return
-	
+
+
 def initialTip(self):
 	"""
 		send a tip from the correct horse battery staple agent to get the new agent funded
@@ -33,18 +48,20 @@ def initialTip(self):
 	except netvend.NetvendResponseError as e:
 		self.writeConsole('Failed to tip new agent - ' + str(e))
 	return
-	
+
+
 def getBalance(self):
 	"""
 		get the balance for the logged in agent
 	"""
-	self.unit = getSetting(self, 'unit', 'satoshi')
+	self.unit = db.getSetting(self, 'unit', 'satoshi')
 	try:
 		self.agentBalance = netvend.convert_value(self.agent.fetch_balance(), 'usat', self.unit)
 	except netvend.NetvendResponseError:
 		self.agentBalance = 0
 	return
-	
+
+
 def putQuery(self, query):
 	"""
 		send the supplied query to netvend and return the response or False on error
@@ -61,7 +78,8 @@ def putQuery(self, query):
 		self.writeConsole('No rows returned - ' + query)
 		return False
 	return response['command_result']
-		
+
+
 def getNick(self, address):
 	"""
 		get the nickname associated with the specified address
@@ -74,24 +92,27 @@ def getNick(self, address):
 	if nick is None:
 		return address
 	else:
-		return nick[0]	
-	
+		return nick[0]
+
+
 def isAddress(check):
 	"""
 		return True if the check string is a bitcoin address
 	"""
 	import re
+
 	if re.search('^[13][a-zA-Z0-9]{26,33}$', check):
 		return True
 	else:
 		return False
+
 
 def getAllNicks(self):
 	"""
 		return a list of nicknames for all users
 	"""
 	self.allNicks = []
-	query = "select address from accounts" 
+	query = "select address from accounts"
 	rows = putQuery(self, query)
 	if rows is False:
 		return False
@@ -99,8 +120,8 @@ def getAllNicks(self):
 		nick = getNick(self, str(row[0]))
 		self.allNicks.append(nick)
 	return
-	
-	
+
+
 def pollAllPosts(self):
 	"""
 		get the highest post id and compare it to our last known post id
@@ -111,31 +132,21 @@ def pollAllPosts(self):
 	if rows is False:
 		return False
 	self.newAllPostId = rows['rows'][0][0]
-	conn = db.open()
-	c = conn.cursor()
-	c.execute('select value from data where name=? and profile=?;', ('all_post_id',str(self.agentAddress)))
-	PostId = c.fetchone()
-	if PostId is None:
-		self.savedAllPostId = 0
-	else:
-		self.savedAllPostId = PostId[0]
+	self.savedAllPostId = db.getData(self, 'all_post_id', 0)
 	if self.newAllPostId > self.savedAllPostId:
-		if self.savedAllPostId == 0:
-			c.execute('insert into data values (?,?,?);', ('all_post_id', str(self.newAllPostId), str(self.agentAddress)))
-		else:
-			c.execute('update data set value = ? where name = ? and profile = ?;', (str(self.newAllPostId), 'all_post_id', str(self.agentAddress)))
-		db.close(conn)
+		db.setData(self, 'all_post_id', self.newAllPostId)
 		return True
 	else:
-		db.close(conn)
 		return False
-		
+
+
 def checkAllPosts(self):
 	"""
 		check any new posts for save-able information
 	"""
 	return
-	
+
+
 def checkNewNicks(self):
 	"""
 		check any new posts for new nicknames	
@@ -148,9 +159,9 @@ def checkNewNicks(self):
 	c = conn.cursor()
 	for row in rows['rows']:
 		c.execute('select id from nicks where address = ?;', (row[0],))
-		id = c.fetchone()
-		nick = row[1].split(':',1)
-		if id is None:
+		nickId = c.fetchone()
+		nick = row[1].split(':', 1)
+		if nickId is None:
 			c.execute('insert into nicks (nick, address) values (?,?);', (nick[1], row[0]))
 		else:
 			c.execute('update nicks set nick = ? where address = ?;', (nick[1], row[0]))
@@ -161,8 +172,9 @@ def checkNewNicks(self):
 			if nick[1] != checkNick[0]:
 				c.execute('update follows set nick=? where address=?;', (nick[1], row[0]))
 	db.close(conn)
-	return		
-		
+	return
+
+
 def getFollows(self):
 	"""
 		return the list of follows from the db
@@ -176,7 +188,8 @@ def getFollows(self):
 	follows = c.fetchall()
 	db.close(conn)
 	return follows
-	
+
+
 def pollFollowsPosts(self):
 	"""
 		get the highest post id of posts made by our follows
@@ -193,25 +206,14 @@ def pollFollowsPosts(self):
 	if rows is False:
 		return False
 	self.newFollowPostId = rows['rows'][0][0]
-	conn = db.open()
-	c = conn.cursor()
-	c.execute('select value from data where name=? and profile=?;', ('follow_post_id',str(self.agentAddress)))
-	PostId = c.fetchone()
-	if PostId is None:
-		self.savedFollowPostId = 0
-	else:
-		self.savedFollowPostId = PostId[0]
+	self.savedFollowPostId = db.getData(self, 'follow_post_id', 0)
 	if self.newFollowPostId > self.savedFollowPostId:
-		if self.savedFollowPostId == 0:
-			c.execute('insert into data values (?,?,?);', ('follow_post_id', str(self.newFollowPostId),str(self.agentAddress)))
-		else:
-			c.execute('update data set value=? where name=? and profile=?;', (str(self.newFollowPostId), 'follow_post_id',str(self.agentAddress)))
-		db.close(conn)
+		db.setData(self, 'follow_post_id', self.newFollowPostId)
 		return True
 	else:
-		db.close(conn)
 		return False
-	
+
+
 def displayFollowsPosts(self):
 	"""
 		display latest posts by your follows
@@ -222,19 +224,23 @@ def displayFollowsPosts(self):
 	followList = ''
 	for follow in follows:
 		followList += '\'' + str(follow[1]) + '\','
-	query = "select post_id, address, data, ts from posts where address in (" + followList[:-1] + ") and post_id > " + str(self.savedFollowPostId) + " order by ts asc"
+	query = "select post_id, address, data, ts from posts where address in (" + followList[
+																				:-1] + ") and post_id > " + str(
+		self.savedFollowPostId) + " order by ts asc"
 	rows = putQuery(self, query)
 	if rows is False:
 		return False
-	self.writeConsole('\n== New Posts from your followed agents ==\n')
+	if 'post:' in rows['rows']:
+		self.writeConsole('\n== New Posts from your followed agents ==\n')
 	for row in rows['rows']:
 		if 'post:' in row[2]:
 			post = row[2].split(':', 1)[1]
 		else:
-			post = row[2]
+			continue
 		self.writeConsole(str(getNick(self, row[1])) + " [" + str(row[3]) + '] (' + str(row[0]) + ') >> ' + str(post))
 	return
-	
+
+
 def getSeedFromNick(nick):
 	"""
 		find and return the seed value for the associated nick
@@ -250,7 +256,8 @@ def getSeedFromNick(nick):
 		return False
 	else:
 		return data[0]
-		
+
+
 def getAddressFromNick(nick):
 	"""
 		find and return the address value for the associated nick
@@ -265,7 +272,8 @@ def getAddressFromNick(nick):
 	if data is None:
 		return False
 	else:
-		return data[0]	
+		return data[0]
+
 
 def getAddressFromPostID(self, postId):
 	"""
@@ -278,33 +286,38 @@ def getAddressFromPostID(self, postId):
 	if rows is False:
 		return False
 	return rows['rows'][0][0]
-	
-def getSetting(self, name, default):
+
+
+def chatPoll(self):
 	"""
-		return a settings value from the database
-		return default if no value exists
+		poll the server for new chat messages
 	"""
-	conn = db.open()
-	c = conn.cursor()
-	c.execute('select value from settings where name=? and profile=?;', (str(name), str(self.agentAddress)))
-	data = c.fetchone()
-	db.close(conn)
-	if data is None:
-		return default
-	else:
-		return data[0]
-		
-def setSetting(self, name, value):
-	"""
-		set the value of the named setting to value
-	"""
-	conn = db.open()
-	c = conn.cursor()
-	c.execute('select value from settings where name=? and profile=?;', (str(name), str(self.agentAddress)))
-	data = c.fetchone()
-	if data is None:
-		c.execute('insert into settings values (?,?,?);', (str(name), str(value), str(self.agentAddress)))
-	else:
-		c.execute('update settings set value=? where name=? and profile=?;', (str(value), str(name), str(self.agentAddress)))
-	db.close(conn)
+	#first get the chat_post_id from local db
+	chatPostId = db.getData(self, 'chat_post_id', 0)
+	query = "select post_id, address, data from posts where post_id > " + str(chatPostId) + " and data like 'chat:%' order by ts asc"
+	rows = putQuery(self, query)
+	if rows is not False:
+		for post in rows['rows']:
+			if post[1] == self.agentAddress:
+				continue
+			self.writeConsole(getNick(self, post[1]) + ' (' + post[0] + ') >> ' + post[2].split(':',1)[1])
+			chatPostId = post[0]
+	db.setData(self, 'chat_post_id', chatPostId)
 	return
+
+
+def getChatters(self):
+	"""
+		fetch and return a list of currently chatting agents
+	"""
+	query = "select address, data from posts where data like 'chatting:%' order by ts desc"
+	rows = putQuery(self, query)
+	if rows is not False:
+		addresses = []
+		chatList = []
+		for row in rows['rows']:
+			if row[0] not in addresses:
+				addresses.append(row[0])
+				if row[1].split(':',1)[1] == 'True':
+					chatList.append(getNick(self, row[0]))
+	return chatList
