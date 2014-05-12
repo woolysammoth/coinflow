@@ -23,16 +23,20 @@ class CoinFlowApp(App):
 	tipAmount = 1
 	pollInterval = 10
 	isChat = False
+	isWhisper = False
+	password = 'T3stFl0w'
 
 
 	def poll(self, dt):
 		"""
-			Poll the server for new chat messages every %pollInterval% seconds
+			Poll the server for new information every %pollInterval% seconds
 		"""
+		#check for new whisper posts directed to us
+		util.whisperPoll(self)
 		if self.isChat is False:
-			return False
-		util.chatPoll(self)
-		return True
+			pass
+		else:
+			util.chatPoll(self)
 
 
 	def togglePoll(self, active):
@@ -65,6 +69,9 @@ class CoinFlowApp(App):
 		if self.isChat is True:
 			com.commandSendChat(self, inText)
 			return
+
+		if self.isWhisper is True:
+			com.commandWhisper(self, inText)
 
 		#options
 		command = inText.split(None, 1)
@@ -150,9 +157,13 @@ class CoinFlowApp(App):
 			com.commandSetUnit(self, command)
 			return
 
-		#/chat [nick / address] [message] - send a public message to the specified agent
+		#/chat - initiate a chat session
 		elif command[0].lower() == '/chat':
 			com.commandChat(self, command)
+
+		#/whisper [nick / address] - initiate an encrypted chat with the specified agent
+		elif command[0].lower() == '/whisper':
+			com.commandWhisper(self, command)
 
 
 		#otherwise we don't know what's going on

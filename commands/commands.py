@@ -1,7 +1,8 @@
+from Crypto.PublicKey import RSA
+from Crypto.Cipher import PKCS1_OAEP
 import netvend.netvend as netvend
 import util.util as util
 import util.db as db
-
 
 def commandAdd(self, command):
 	"""
@@ -33,6 +34,7 @@ def commandAdd(self, command):
 	#check for new nicknames
 	if util.pollAllPosts(self):
 		util.checkNewNicks(self)
+	self.togglePoll(True)
 	return
 
 
@@ -44,8 +46,7 @@ def commandLogin(self, command):
 		check profiles and update or insert
 	"""
 	if len(command) < 2:
-		self.writeConsole(
-			'You need to supply some detail for the agent you want to login as.\nCould be the agents nickname, address or seed')
+		self.writeConsole('You need to supply some detail for the agent you want to login as.\nCould be the agents nickname, address or seed')
 		return
 	seed = util.getSeedFromNick(command[1])
 	if seed is False:
@@ -73,6 +74,7 @@ def commandLogin(self, command):
 		util.checkNewNicks(self)
 	#check for new posts from follows
 	commandFeed(self, command)
+	self.togglePoll(True)
 	return
 
 
@@ -104,7 +106,7 @@ def commandTip(self, command):
 			return
 		postId = command[1]
 	try:
-		response = self.agent.tip(tipAddress, netvend.convert_value(self.tipAmount, self.unit, 'usat'), postId)
+		response = self.agent.tip(tipAddress, netvend.convert_value(int(self.tipAmount), str(self.unit), 'usat'), postId)
 		if response['success'] == 1:
 			try:
 				self.agentBalance = self.agent.fetch_balance()
@@ -128,7 +130,7 @@ def commandGetTipAmount(self, command):
 	"""
 	if not util.checkLogin(self):
 		return
-	self.tipAmount = util.getSetting(self, 'tipAmount', 1)
+	self.tipAmount = db.getSetting(self, 'tipAmount', 1)
 	self.writeConsole('Current Tip Amount is ' + str(self.tipAmount) + ' ' + str(self.unit))
 	return
 
@@ -144,7 +146,7 @@ def commandSetTipAmount(self, command):
 		self.writeConsole('You need to supply the new tip amount in ' + str(self.unit))
 		return
 	self.tipAmount = command[1]
-	util.setSetting(self, 'tipAmount', self.tipAmount)
+	db.setSetting(self, 'tipAmount', self.tipAmount)
 	self.writeConsole('Tip amount has been set to ' + str(self.tipAmount) + ' ' + str(self.unit))
 	return
 
@@ -371,7 +373,7 @@ def commandGetUnit(self, command):
 	"""
 	if not util.checkLogin(self):
 		return
-	self.unit = util.getSetting(self, 'unit', 'satoshi')
+	self.unit = db.getSetting(self, 'unit', 'satoshi')
 	self.writeConsole('Current display unit is ' + str(self.unit))
 	return
 
@@ -391,7 +393,7 @@ def commandSetUnit(self, command):
 		self.writeConsole('The unit you entered is not known.\nAcceptable values are ' + str(availableUnits))
 		return
 	self.unit = command[1].lower()
-	util.setSetting(self, 'unit', self.unit)
+	db.setSetting(self, 'unit', self.unit)
 	self.writeConsole('Display unit has been set to ' + str(self.unit))
 	return
 
@@ -417,10 +419,10 @@ def commandChat(self, command):
 		self.writeConsole(chatter)
 	self.writeConsole('\nEnter /chat again to stop chatting\n')
 	#get and print the 5 posts previous to our joining
-	query = "select post_id, address, data from posts where data like 'chat:%' order by ts asc limit 5"
+	query = "select post_id, address, data from posts where data like 'chat:%' order by ts desc limit 5"
 	posts = util.putQuery(self, query)
 	if posts is not False:
-		for post in posts['rows']:
+		for post in reversed(posts['rows']):
 			self.writeConsole(util.getNick(self, post[1]) + ' (' + post[0] + ') >> ' + post[2].split(':',1)[1])
 			chatPostId = post[0]
 	db.setData(self, 'chat_post_id', chatPostId)
@@ -456,3 +458,44 @@ def commandSendChat(self, message):
 	return
 	
 		
+def commandWhisper(self, command):
+	"""
+		Initiate a whisper session with the agent specified
+	"""
+	if not util.checkLogin(self):
+		return
+	if len(command) < 2:
+		self.writeConsole('You need to supply the detail of the agent or post you wish to whisper to.')
+		return
+	if self.isWhisper is False:
+		#generate a new private/public key pair
+		self.whisperAlicePubKey = util.genPubKey(self)
+		if self.whisperAlicePubKey is False:
+			self.writeConsole('Unable to post your Public Key')
+			return False
+		#fetch the specified agents public key
+		address = util.checkAddress(command[1])
+		if address is False:
+			self.writeConsole('Couldn\'t find the agent specified.')
+			return
+		query = "select data from posts where address = '" + str(address) + "' and data like 'whisperpubkey:%' order by ts desc limit 1"
+		rows = util.putQuery(self, query)
+		if rows is False:
+			self.writeConsole('Couldn\'t find a Public Key for agent ' + command[1])
+			return
+		print(str(rows['rows'][0][0].split(':',1)[1]))
+		self.whisperBobPubKey = RSA.importKey(str(rows['rows'][0][0].split(':',1)[1]))
+		self.whisperBobAddress = address
+		self.writeConsole('The next thing you type into the input box will be encrypted and sent to ' + command[1])
+		self.isWhisper = True
+		return
+	if self.isWhisper is True:
+		cipher = PKCS1_OAEP.new(self.whisperBobPubKey)
+		message = cipher.encrypt(command)
+		#the post contains the public key we used so that the correct private key can be identified by Bob
+		self.agent.post('whisper:' + str(self.whisperBobPubKey) + '|' + str(message))
+		self.writeConsole('whisper >> ' + str(self.whisperBobPubKey) + '|' + str(message))
+		return
+
+
+

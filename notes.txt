@@ -1,3 +1,19 @@
-post_id | address | data
-1 | mj2p | chatting:True
+objects are needed
+	agent
+		properties for  loggedIn
+						address
+						balance
+						tipAmount
+						unit
+						follows
+
+		methods to get and set each property
+
+		__init__ sets all properties
+
+
+
+chat history?
+
+whisper
 	

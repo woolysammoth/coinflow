@@ -1,5 +1,7 @@
 import netvend.netvend as netvend
 import db as db
+from Crypto.PublicKey import RSA
+from Crypto.Cipher import PKCS1_OAEP
 
 
 def checkLogin(self):
@@ -75,7 +77,7 @@ def putQuery(self, query):
 			self.writeConsole('Query error - ' + str(e) + ' - ' + query)
 		return False
 	if response['command_result']['num_rows'] < 1:
-		self.writeConsole('No rows returned - ' + query)
+		#self.writeConsole('No rows returned - ' + query)
 		return False
 	return response['command_result']
 
@@ -321,3 +323,68 @@ def getChatters(self):
 				if row[1].split(':',1)[1] == 'True':
 					chatList.append(getNick(self, row[0]))
 	return chatList
+
+
+def checkAddress(check):
+	"""
+		Check the supplied string for bitcoin address.
+		return address if it's a nick
+	"""
+	if isAddress(check):
+		return check
+	#otherwise test for nickname
+	elif getAddressFromNick(check) is not False:
+		return getAddressFromNick(check)
+	else:
+		return False
+
+
+def genPubKey(self):
+	"""
+		Using PyCrypto, generate a new public/private key pair
+		save to the database
+	"""
+	#generate a random number
+	key = RSA.generate(2048)
+	pubKey = key.publickey()
+	pubKey = pubKey.exportKey(passphrase=self.password)
+	privKey = key.exportKey(passphrase=self.password)
+	try:
+		self.agent.post('whisperpubkey:' + pubKey)
+	except netvend.NetvendResponseError as e:
+		return False
+	db.setData(self, pubKey, privKey)
+	return pubKey
+
+
+def whisperPoll(self):
+	"""
+		Poll netvend for new tip information send our way
+	"""
+	whisperId = db.getData(self,'whisper_id',0)
+	query = "select t.tip_id, p.data, t.from_address from posts as p inner join tips as t on t.post_id = p.post_id where t.to_address = '" + str(self.agentAddress) + "' and t.tip_id > " + str(whisperId) + " and p.data like 'whisper:%' order by t.ts asc"
+	rows = putQuery(self, query)
+	if rows is not False:
+		for whisper in rows['rows']:
+			self.writeConsole(str(getNick(self,whisper[2])) + ' [whisper] >> ' + str(decryptWhisper(self, whisper[1])))
+			whisperId = whisper[0]
+	db.setData(self, 'whisper_id', whisperId)
+	return
+
+
+def decryptWhisper(self, text):
+	"""
+		decrypt a whisper post using the correct privatekey from the database
+	"""
+	text = text.split(':', 1)[1].split('|',1)
+	pubK = text[0]
+	whisper = text[1]
+	privK = db.getData(self,pubK,None)
+	if privK is None:
+		return 'Couldn\'t find the private key to decrypt this whisper'
+	privK = RSA.importKey(privK, self.password)
+	cipher = PKCS1_OAEP.new(self.whisperBobPubKey)
+	return cipher.decrypt(whisper)
+
+
+
