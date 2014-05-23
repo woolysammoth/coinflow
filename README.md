@@ -33,13 +33,15 @@ current commands are:
 
 /settipamount [amount] - set the tip amount to the specified value in mu-sat
 
+/whisper [agent] - start a whisper. The next thing you enter in the text input will be encrypted and sent as a single message to the specified agent.
+
 
 More commands are coming as well as further functionality.
 This software is just me finding out what netvend can do and messing around.
 Don't trust it as it is fairly rough around the edges
 
 
-It will require kivy <http://kivy.org> in order to work
+It will require kivy <http://kivy.org> and pyCrypto <https://www.dlitz.net/software/pycrypto/> in order to work
 
 
 Comments welcome
