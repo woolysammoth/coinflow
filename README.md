@@ -34,9 +34,10 @@ current commands are:
 /settipamount [amount] - set the tip amount to the specified value in mu-sat
 
 /whisper [nickname / address] - start a whisper. The next thing you enter in the text input will be encrypted and sent as a single message to the specified agent.
+
 WARNING - as this is only a proof of concept, all messages are encrypted using the same default password.
 Do not use this functionality for anything that you want to keep secret. 
-Either change the password property in the code or wait for me to add the functionality
+Either change the password property in the code or wait for me to add the functionality to change it from within the app
 
 
 
