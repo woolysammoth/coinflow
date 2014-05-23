@@ -33,6 +33,7 @@ class CoinFlowApp(App):
 		"""
 		#check for new whisper posts directed to us
 		util.whisperPoll(self)
+		#is we are chatting, check for new chat posts
 		if self.isChat is False:
 			pass
 		else:
@@ -72,6 +73,7 @@ class CoinFlowApp(App):
 
 		if self.isWhisper is True:
 			com.commandWhisper(self, inText)
+			return
 
 		#options
 		command = inText.split(None, 1)

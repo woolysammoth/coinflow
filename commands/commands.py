@@ -483,7 +483,6 @@ def commandWhisper(self, command):
 		if rows is False:
 			self.writeConsole('Couldn\'t find a Public Key for agent ' + command[1])
 			return
-		print(str(rows['rows'][0][0].split(':',1)[1]))
 		self.whisperBobPubKey = RSA.importKey(str(rows['rows'][0][0].split(':',1)[1]))
 		self.whisperBobAddress = address
 		self.writeConsole('The next thing you type into the input box will be encrypted and sent to ' + command[1])
@@ -493,8 +492,19 @@ def commandWhisper(self, command):
 		cipher = PKCS1_OAEP.new(self.whisperBobPubKey)
 		message = cipher.encrypt(command)
 		#the post contains the public key we used so that the correct private key can be identified by Bob
-		self.agent.post('whisper:' + str(self.whisperBobPubKey) + '|' + str(message))
-		self.writeConsole('whisper >> ' + str(self.whisperBobPubKey) + '|' + str(message))
+		#self.writeConsole('whisper >> ' + str(self.whisperBobPubKey) + '|' + message)
+		try:
+			response = self.agent.post('whisper:' + str(self.whisperBobPubKey.exportKey(passphrase=self.password)) + '|' + message.encode('base64','strict'))
+		except netvend.NetvendResponseError as e:
+			self.writeConsole('whisper failed - ' + str(e))
+		#tip the agent to alert them to the whisper
+		if response['success'] == 1:
+			try:
+				self.agent.tip(self.whisperBobAddress, 1, response['command_result'])
+			except netvend.NetvendResponseError as e:
+				self.writeConsole('whisper failed - ' + str(e))
+		self.writeConsole('whisper sent')
+		self.isWhisper = False
 		return
 
 

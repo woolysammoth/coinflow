@@ -365,9 +365,13 @@ def whisperPoll(self):
 	query = "select t.tip_id, p.data, t.from_address from posts as p inner join tips as t on t.post_id = p.post_id where t.to_address = '" + str(self.agentAddress) + "' and t.tip_id > " + str(whisperId) + " and p.data like 'whisper:%' order by t.ts asc"
 	rows = putQuery(self, query)
 	if rows is not False:
+		self.writeConsole('')
+		self.writeConsole('===== New Whispers =====')
+		self.writeConsole('')
 		for whisper in rows['rows']:
 			self.writeConsole(str(getNick(self,whisper[2])) + ' [whisper] >> ' + str(decryptWhisper(self, whisper[1])))
 			whisperId = whisper[0]
+		self.writeConsole('')
 	db.setData(self, 'whisper_id', whisperId)
 	return
 
@@ -378,12 +382,12 @@ def decryptWhisper(self, text):
 	"""
 	text = text.split(':', 1)[1].split('|',1)
 	pubK = text[0]
-	whisper = text[1]
+	whisper = text[1].decode('base64','strict')
 	privK = db.getData(self,pubK,None)
 	if privK is None:
 		return 'Couldn\'t find the private key to decrypt this whisper'
 	privK = RSA.importKey(privK, self.password)
-	cipher = PKCS1_OAEP.new(self.whisperBobPubKey)
+	cipher = PKCS1_OAEP.new(privK)
 	return cipher.decrypt(whisper)
 
 
