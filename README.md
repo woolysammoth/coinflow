@@ -60,9 +60,9 @@ Do not use this functionality for anything that you want to keep secret.
 Either change the password property in the code or wait for me to add the functionality  
 
 
-More commands are coming as well as further functionality.  
-This software is just me finding out what netvend can do and messing around.  
-Don't trust it as it is fairly rough around the edges.  
+More commands are coming as well as further functionality.   
+This software is just me finding out what netvend can do and messing around.   
+Don't trust it as it is fairly rough around the edges.   
 
 
 Comments welcome
