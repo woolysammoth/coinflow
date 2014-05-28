@@ -28,12 +28,14 @@ def commandAdd(self, command):
 	else:
 		c.execute('update profiles set nick=? where seed=?;', (str(self.agentNick), str(self.agentSeed)))
 	db.close(conn)
-	self.writeConsole(
-		'Agent created.\nAddress is ' + str(self.agentAddress) + '\nBalance is ' + str(self.agentBalance) + ' ' + str(
-			self.unit))
+	self.writeConsole('Agent created.\nAddress is ' + str(self.agentAddress) + '\nBalance is ' + str(self.agentBalance) + ' ' + str(self.unit))
 	#check for new nicknames
 	if util.pollAllPosts(self):
 		util.checkNewNicks(self)
+	#generate a new public/private key pair
+	self.whisperAlicePubKey = util.genPubKey(self)
+	if self.whisperAlicePubKey is False:
+		self.writeConsole('Unable to post your Public Key')
 	self.togglePoll(True)
 	return
 
@@ -74,6 +76,10 @@ def commandLogin(self, command):
 		util.checkNewNicks(self)
 	#check for new posts from follows
 	commandFeed(self, command)
+	#generate a new public/private key pair
+	self.whisperAlicePubKey = util.genPubKey(self)
+	if self.whisperAlicePubKey is False:
+		self.writeConsole('Unable to post your Public Key')
 	self.togglePoll(True)
 	return
 
@@ -468,12 +474,6 @@ def commandWhisper(self, command):
 		self.writeConsole('You need to supply the detail of the agent or post you wish to whisper to.')
 		return
 	if self.isWhisper is False:
-		#generate a new private/public key pair
-		self.whisperAlicePubKey = util.genPubKey(self)
-		if self.whisperAlicePubKey is False:
-			self.writeConsole('Unable to post your Public Key')
-			return False
-		#fetch the specified agents public key
 		address = util.checkAddress(command[1])
 		if address is False:
 			self.writeConsole('Couldn\'t find the agent specified.')
@@ -485,27 +485,32 @@ def commandWhisper(self, command):
 			return
 		self.whisperBobPubKey = RSA.importKey(str(rows['rows'][0][0].split(':',1)[1]))
 		self.whisperBobAddress = address
-		self.writeConsole('The next thing you type into the input box will be encrypted and sent to ' + command[1])
+		self.writeConsole('Whisper session with ' + command[1] + 'has been initiated')
+		self.writeConsole('Enter \'/whisper\' again to end this whisper session')
 		self.isWhisper = True
 		return
-	if self.isWhisper is True:
-		cipher = PKCS1_OAEP.new(self.whisperBobPubKey)
-		message = cipher.encrypt(command)
-		#the post contains the public key we used so that the correct private key can be identified by Bob
-		#self.writeConsole('whisper >> ' + str(self.whisperBobPubKey) + '|' + message)
+
+def commandSendWhisper(self, command):
+	if command == '/whisper':
+		self.isWhisper = False
+		self.writeConsole('Whisper session ended')
+		return
+	cipher = PKCS1_OAEP.new(self.whisperBobPubKey)
+	message = cipher.encrypt(command)
+	#the post contains the public key we used so that the correct private key can be identified by Bob
+	#self.writeConsole('whisper >> ' + str(self.whisperBobPubKey) + '|' + message)
+	try:
+		response = self.agent.post('whisper:' + str(self.whisperBobPubKey.exportKey(passphrase=self.password)) + '|' + message.encode('base64','strict'))
+	except netvend.NetvendResponseError as e:
+		self.writeConsole('whisper failed - ' + str(e))
+	#tip the agent to alert them to the whisper
+	if response['success'] == 1:
 		try:
-			response = self.agent.post('whisper:' + str(self.whisperBobPubKey.exportKey(passphrase=self.password)) + '|' + message.encode('base64','strict'))
+			self.agent.tip(self.whisperBobAddress, 1, response['command_result'])
 		except netvend.NetvendResponseError as e:
 			self.writeConsole('whisper failed - ' + str(e))
-		#tip the agent to alert them to the whisper
-		if response['success'] == 1:
-			try:
-				self.agent.tip(self.whisperBobAddress, 1, response['command_result'])
-			except netvend.NetvendResponseError as e:
-				self.writeConsole('whisper failed - ' + str(e))
-		self.writeConsole('whisper sent')
-		self.isWhisper = False
-		return
+	self.writeConsole('whisper sent')
+	return
 
 
 

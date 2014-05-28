@@ -46,7 +46,7 @@ def initialTip(self):
 	"""
 	try:
 		chbsagent = netvend.Agent('correct horse battery staple', seed=True)
-		response = chbsagent.tip(self.agentAddress, netvend.convert_value(10, 'satoshi', 'usat'), None)
+		response = chbsagent.tip(self.agentAddress, netvend.convert_value(10, 'satoshi', 'usat'), 0)
 	except netvend.NetvendResponseError as e:
 		self.writeConsole('Failed to tip new agent - ' + str(e))
 	return
@@ -353,6 +353,10 @@ def genPubKey(self):
 		self.agent.post('whisperpubkey:' + pubKey)
 	except netvend.NetvendResponseError as e:
 		return False
+	#we should only need to retain the previous one public/private key in the database.
+	#any whispers sent to us while logged out will have been encrypted using our last generated public key
+	#any encrypted using public keys generated prior to that would have been viewed the last time we logged in.
+	#on the other hand it may be useful to retain all keys as then past whispers can still be decrypted.
 	db.setData(self, pubKey, privKey)
 	return pubKey
 

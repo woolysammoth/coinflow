@@ -72,7 +72,7 @@ class CoinFlowApp(App):
 			return
 
 		if self.isWhisper is True:
-			com.commandWhisper(self, inText)
+			com.commandSendWhisper(self, inText)
 			return
 
 		#options

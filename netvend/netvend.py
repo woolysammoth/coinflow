@@ -121,6 +121,7 @@ class AgentBasic(AgentCore):
         self.max_query_fee = fee
 
     def post_process(self, data):
+        print(data)
         try:
             data = json.loads(data)
         except ValueError:
